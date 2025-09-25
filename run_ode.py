@@ -186,7 +186,8 @@ def main(args):
 
     net.load_state_dict(torch.load(f'net_params_{args.filename}_{args.num_gpu}.pkl'))
     test_rmse, test_mae, test_mape = eval(test_loader, net, std, mean, args.device)
-    print(f'##on test data## rmse loss: {test_rmse}, mae loss: {test_mae}, mape loss: {test_mape}')
+
 
 if __name__ == '__main__':
     main(args)
+

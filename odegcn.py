@@ -1,17 +1,13 @@
 import numpy as np
 import torch
 from torch import nn
-
-# 是否使用 adjoint 方法（保留接口）
 adjoint = False
 if adjoint:
     from torchdiffeq import odeint_adjoint as odeint
 else:
     from torchdiffeq import odeint
-
-
+    
 class ModulationNet(nn.Module):
-    """生成动态调制系数的轻量网络"""
     def __init__(self, feature_dim: int, hidden_dim: int = 128):
         super(ModulationNet, self).__init__()
         self.net = nn.Sequential(
@@ -19,7 +15,6 @@ class ModulationNet(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, feature_dim)
         )
-
     def forward(self, x_mean: torch.Tensor) -> torch.Tensor:
         return self.net(x_mean)  # (B, F)
 
@@ -67,13 +62,11 @@ class ODEFunc(nn.Module):
 
 
 class ExpODEblock(nn.Module):
-    """原始 Euler-like 半解析积分"""
     def __init__(self, odefunc, steps=12, total_time=1.0):
         super(ExpODEblock, self).__init__()
         self.odefunc = odefunc
         self.steps   = steps
         self.delta   = total_time / steps
-
     def forward(self, x):
         h = x
         for _ in range(self.steps):
@@ -84,18 +77,15 @@ class ExpODEblock(nn.Module):
 
 
 class RK4ExpODEblock(nn.Module):
-    """4阶 Runge-Kutta 半解析积分"""
     def __init__(self, odefunc, steps=12, total_time=1.0):
         super(RK4ExpODEblock, self).__init__()
         self.odefunc = odefunc
         self.steps   = steps
         self.delta   = total_time / steps
-
     def _f(self, h):
         f_base     = self.odefunc.compute_base(h)
         modulation = self.odefunc.compute_modulation(h)
         return f_base * torch.exp(modulation)
-
     def forward(self, x):
         h = x
         for _ in range(self.steps):
@@ -106,9 +96,7 @@ class RK4ExpODEblock(nn.Module):
             h  = h + (self.delta / 6.0) * (k1 + 2*k2 + 2*k3 + k4)
         return h
 
-
 class ODEG(nn.Module):
-    """ 半解析 + 指数式积分（支持 rk4 / euler） """
     def __init__(self, feature_dim, temporal_dim, adj, time=1.0, steps=12, solver='rk4'):
         super(ODEG, self).__init__()
         odefunc = ODEFunc(feature_dim, temporal_dim, adj)

@@ -29,11 +29,6 @@ def make_weights(h: int, lam: float = 0.2, device=None):
 
 def train(loader, net, optimizer, device, horizon, loss_lambda,
           alpha: float = 0.7, smoothl1_beta: float = 1.0):
-    """
-    混合损失：weighted MAE 与 weighted SmoothL1 的凸组合
-      loss = alpha * MAE + (1 - alpha) * SmoothL1
-    所有损失都只在前 horizon 步上计算，并使用指数权重。
-    """
     net.train()
     total_loss = 0.0
     n_batches = 0
@@ -48,12 +43,12 @@ def train(loader, net, optimizer, device, horizon, loss_lambda,
         pred = outputs[:, :, :horizon]   # (B,N,h)
         true = targets[:, :, :horizon]   # (B,N,h)
 
-        # element-wise |pred-true|
-        abs_err = torch.abs(pred - true)                         # (B,N,h)
+
+        abs_err = torch.abs(pred - true)                       
         mae_w   = (abs_err * weights.view(1,1,-1)).mean()
 
-        # SmoothL1 (Huber) element-wise，无归约 -> 配合权重
-        smooth = F.smooth_l1_loss(pred, true, beta=smoothl1_beta, reduction='none')  # (B,N,h)
+
+        smooth = F.smooth_l1_loss(pred, true, beta=smoothl1_beta, reduction='none')  
         smooth_w = (smooth * weights.view(1,1,-1)).mean()
 
         loss = alpha * mae_w + (1.0 - alpha) * smooth_w
@@ -124,9 +119,9 @@ def main(args):
         num_timesteps_output=args.pred_length,
         A_sp_hat=A_sp_wave,
         A_se_hat=A_se_wave,
-        hidden_channels=64,  # 可调：64/96/128
-        num_stacks=2,  # 可调：2~3
-        odeg_steps=12,  # 与你的设置一致
+        hidden_channels=64,  
+        num_stacks=2,  
+        odeg_steps=12,  
         odeg_solver='rk4',
         dropout=0.1
     ).to(args.device)
@@ -168,7 +163,7 @@ def main(args):
             logger.info(f"Train (h={h}) RMSE {train_rmse:.6f}, MAE {train_mae:.6f}, MAPE {train_mape:.6f}")
             logger.info(f"Valid (h={h}) RMSE {valid_rmse:.6f}, MAE {valid_mae:.6f}, MAPE {valid_mape:.6f}")
 
-            # === 保存到 txt ===
+
             with open(log_file, "a") as f:
                 f.write(f"{stage_idx + 1}\t{epoch}\t{h}\t"
                         f"{train_loss:.6f}\t"
@@ -190,4 +185,5 @@ def main(args):
 
 if __name__ == '__main__':
     main(args)
+
 
